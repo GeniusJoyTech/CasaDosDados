@@ -29,6 +29,19 @@
 </head>
 
 <body>
+    <!-- Toast Bootstrap -->
+    <div id="toast"
+        class="toast align-items-center text-white border-0 position-fixed top-50 start-50 translate-middle m-3"
+        style="z-index: 1050;" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div id="toast-body" class="toast-body">
+                Download concluído com sucesso!
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                aria-label="Close"></button>
+        </div>
+    </div>
+
     <form class="container">
         <div class="dropdown">
             <div class="mb-3">
@@ -105,11 +118,12 @@
             </div>
             <div class="mb-3">
                 <label for="cep" class="form-label">CEP</label>
-                <input type="text" class="form-control" id="cep" placeholder='exemplo: "01001-001"'' value>
+                <input type="text" oninput="this.value = this.value.replace(/[^0-9]/g, '');" maxlength="8"
+                   onchange="buscaCep(this.value)" class="form-control" id="cep" placeholder='exemplo: "01001001", somente numeros.' value>
             </div>
             <div class="mb-3">
                 <label for="uf" class="form-label">Estado (UF)</label>
-                <input type="text" class="form-control" id="uf" placeholder=' Exemplo: "Brasília" ...' value>
+                <input type="text" class="form-control" id="uf" maxlength="2" onchange="this.value = this.value.toUpperCase()" placeholder=' Exemplo: "Brasília" ...' value>
             </div>
             <div class="mb-3">
                 <label for="municipio" class="form-label">Municipio</label>
@@ -127,16 +141,16 @@
             </div>
 
             <div class="mb-3">
-                <label for="data_abertura_lte" class="form-label">Data de abertura - A partir de: </label>
-                <input type="date" class="form-control" id="data_abertura_lte"'>
+                <label for="data_abertura_gte" class="form-label">Data de abertura - A partir de: </label>
+                <input type="date" class="form-control" id="data_abertura_gte"'>
             </div>
             <div class="mb-3">
-                <label for="data_abertura_gte" class="form-label">Data de abertura - Até: </label>
-                <input type="date" class="form-control" id="data_abertura_gte" placeholder=' Exemplo: Brasília'>
+                <label for="data_abertura_lte" class="form-label">Data de abertura - Até: </label>
+                <input type="date" class="form-control" id="data_abertura_lte" placeholder=' Exemplo: Brasília'>
             </div>
             <div class="mb-3">
-                <label for="capital_abertura_lte" class="form-label">Capital Social - A partir de: </label>
-                <input type="number" step="0.01" class="form-control" id="capital_abertura_lte"
+                <label for="capital_abertura_gte" class="form-label">Capital Social - A partir de: </label>
+                <input type="number" step="0.01" class="form-control" id="capital_abertura_gte"
                     placeholder="Apenas números, não adicionar $ ou caracteres especiais.">
             </div>
             <div class="mb-3">
@@ -183,8 +197,8 @@
                 </div>
                 <div class="mb-3">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch" id="somente_matriz">
-                        <label class="form-check-label" for="somente_matriz">Somente Celular</label>
+                        <input class="form-check-input" type="checkbox" role="switch" id="somente_celular">
+                        <label class="form-check-label" for="somente_celular">Somente Celular</label>
                     </div>
                 </div>
                 <div class="mb-3">
@@ -194,15 +208,32 @@
                     </div>
                 </div>
             </div>
+            <div class="mb-3">
+                <label for="pagina" class="form-label">Página</label>
+                <input type="number" class="form-control" id="pagina" min="1" step="1" placeholder='Exemplo: 11'
+                    value="1">
+            </div>
             <button type="button" id="Enviar" class="btn btn-primary" onclick="createJson()">Pesquisar</button>
 
-
         </div>
+        <script>
+            function buscaCep(cep){
+                fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                .then(response => response.json())
+                .then(data => {
+                    let regex = data.localidade
+                    document.getElementById('uf').value = data.uf;
+                    document.getElementById('municipio').value = data.localidade;
+                    document.getElementById('bairro').value = data.bairro.replace(regex, '');
+                })
+                .catch(error => console.error('Erro ao buscar endereço:', error));
+            }
+        </script>
         <script src="script.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
             crossorigin="anonymous"></script>
-            
+
 </body>
 
 </html>

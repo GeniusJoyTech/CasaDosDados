@@ -19,17 +19,18 @@ function createJson() {
         data_abertura_lte = document.getElementById("data_abertura_lte").value,
         data_abertura_gte = document.getElementById("data_abertura_gte").value,
         capital_abertura_lte = document.getElementById("capital_abertura_lte").value,
-        capital_abertura_gte = document.getElementById("capital_abertura_lte").value,
+        capital_abertura_gte = document.getElementById("capital_abertura_gte").value,
         somente_mei = document.getElementById("somente_mei").checked ? true : false,
         excluir_mei = document.getElementById("excluir_mei").checked ? true : false,
         com_contato_telefonico = document.getElementById("com_contato_telefonico").checked ? true : false,
+        somente_celular = document.getElementById("somente_celular").checked ? true : false,
         somente_fixo = document.getElementById("somente_fixo").checked ? true : false,
         somente_matriz = document.getElementById("somente_matriz").checked ? true : false,
         somente_filial = document.getElementById("somente_filial").checked ? true : false,
-        com_email = document.getElementById("com_email").checked ? true : false;
+        com_email = document.getElementById("com_email").checked ? true : false,
+        pagina = document.getElementById("pagina").value;
+    pagina = parseInt(pagina);
 
-    // Array para armazenar todas as respostas.data.cnpj
-    var allResponses = [];
 
     // Função para fazer a requisição para uma página específica
     function fetchPage(page) {
@@ -61,6 +62,7 @@ function createJson() {
                 "com_email": com_email,
                 "incluir_atividade_secundaria": incluir_atividade_secundaria,
                 "com_contato_telefonico": com_contato_telefonico,
+                "somente_celular": somente_celular,
                 "somente_fixo": somente_fixo,
                 "somente_matriz": somente_matriz,
                 "somente_filial": somente_filial
@@ -79,36 +81,29 @@ function createJson() {
         return fetch('https://api.casadosdados.com.br/v2/public/cnpj/search', requestOptions)
             .then(response => {
                 if (!response.ok) {
+                    showToast("Erro durante a busca, resposta não Ok.", "error");
                     throw new Error('Network response was not ok');
                 }
                 return response.json();
             })
             .then(data => {
-                console.log(`Response for page ${page}:`, data.data.cnpj);
-                allResponses.push(...data.data.cnpj);  // Adiciona os cnpjs da página ao array
+                if (data.data.count === 0) {
+                    showToast("Não há dados.");
+                    return;
+                }
+                data.data.cnpj.forEach(empresa => {
+                    empresa.atividade_principal = formatarAtividadePrincipal(empresa);
+                });
+                exportToCSV(data.data.cnpj, 'casadosdados.csv');
+                showToast("Download Concluído.", "success");
             })
             .catch(error => {
+                showToast("Erro durante a busca.", "error");
                 console.error(`Fetch error for page ${page}:`, error);
             });
     }
 
-    // Função para buscar as páginas sequencialmente
-    function fetchPagesSequentially(currentPage) {
-        if (currentPage <= 10) {
-            fetchPage(currentPage)
-                .then(() => {
-                    fetchPagesSequentially(currentPage + 1);  // Chama a próxima página
-                });
-        } else {
-            // console.log('All pages fetched:', allResponses);
-            // allResponses = formatarAtividadePrincipal(allResponses);
-            // console.log(allResponses)
-            // exportToCSV(allResponses, "Casadosdados.csv");
-        }
-    }
-
-    // Inicia a busca da página 1
-    fetchPagesSequentially(1);
+    fetchPage(pagina);
 }
 
 // Função para exportar JSON para CSV com tabulação
@@ -156,6 +151,63 @@ function formatarAtividadePrincipal(empresa) {
     if (!empresa || !empresa.atividade_principal || !empresa.atividade_principal.codigo || !empresa.atividade_principal.descricao) {
         return "";  // Retorna uma string vazia se não houver dados válidos
     }
-
-    return `${empresa.atividade_principal.codigo} - ${empresa.atividade_principal.descricao}`;
+    let descricao = substituirCaracteres(empresa.atividade_principal.descricao);
+    return `${empresa.atividade_principal.codigo} - ${descricao}`;
 }
+
+function substituirCaracteres(str) {
+    return str.replace(/[áàâãÁÀÂÃéèêÉÈÊíìÍÌóòôõÓÒÔÕúùûÚÙÛçÇ]/g, function (match) {
+        switch (match) {
+            case 'á': case 'à': case 'â': case 'ã': return 'a';
+            case 'À': case 'Á': case 'Â': case 'Ã': return 'A';
+            case 'é': case 'è': case 'ê': return 'e';
+            case 'É': case 'È': case 'Ê': return 'E';
+            case 'í': case 'ì': return 'i';
+            case 'Í': case 'Ì': return 'A';
+            case 'ó': case 'ò': case 'ô': case 'õ': return 'o';
+            case 'Ó': case 'Ò': case 'Ô': case 'Õ': return 'O';
+            case 'ú': case 'ù': case 'û': return 'u';
+            case 'Ú': case 'Ù': case 'Û': return 'U';
+            case 'Ç': return 'C';
+            case 'ç': return 'c';
+            default: return match;
+        }
+    });
+
+}
+function showToast(message, type) {
+    var toastElement = document.getElementById('toast');
+    var toastBodyElement = document.getElementById('toast-body');
+
+    // Definir o conteúdo do toast
+    toastBodyElement.innerText = message;
+
+    // Limpar classes de cor anteriores (se houver)
+    toastElement.classList.remove('bg-success', 'bg-danger', 'bg-warning'); // Remover outras classes de cor se necessário
+
+    // Definir nova classe de cor baseada no tipo (opcional)
+    switch (type) {
+        case 'success':
+            toastElement.classList.add('bg-success'); // Adicionar classe de cor de sucesso
+            break;
+        case 'error':
+            toastElement.classList.add('bg-danger'); // Adicionar classe de cor de erro
+            break;
+        case 'warning':
+            toastElement.classList.add('bg-warning'); // Adicionar classe de cor de aviso
+            break;
+        default:
+            toastElement.classList.add('bg-info'); // Cor padrão, se nenhum tipo específico for fornecido
+            break;
+    }
+
+    // Criar um novo toast usando o Bootstrap
+    var toast = new bootstrap.Toast(toastElement, {
+        autohide: true,
+        delay: 3000
+    });
+
+    // Exibir o toast
+    toast.show();
+}
+
